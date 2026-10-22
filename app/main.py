@@ -14,6 +14,11 @@ from app.api.analytics import router as analytics_router
 async def lifespan(app: FastAPI):
     # Initialize DB schemas on startup
     await init_db()
+    try:
+        from seed_demo_data import seed
+        await seed()
+    except Exception as e:
+        print(f"Auto-seed info: {e}")
     yield
 
 app = FastAPI(
