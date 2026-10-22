@@ -1,5 +1,13 @@
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 from pydantic import BaseModel
+
+# Load environment variables from backend/.env or cwd
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(dotenv_path=_env_path)
+load_dotenv()
 
 class Settings(BaseModel):
     APP_NAME: str = "Rakshan AI Core Engine"
@@ -13,6 +21,7 @@ class Settings(BaseModel):
     
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./rakshan_dev.db")
+    MONGO_URI: str = os.getenv("MONGO_URI", "")
     
     # Pairing Code
     PAIRING_CODE_LENGTH: int = 6
