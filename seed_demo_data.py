@@ -2,11 +2,11 @@ import asyncio
 import sys
 from datetime import datetime, timedelta
 
-if sys.stdout.encoding.lower() != "utf-8":
-    try:
+try:
+    if getattr(sys.stdout, "encoding", None) and sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
+except Exception:
+    pass
 
 from app.database import init_db, AsyncSessionLocal
 from app.models.db_models import User, ChildDevice, SafetyIncident, ActivityLog
