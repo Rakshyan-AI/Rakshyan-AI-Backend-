@@ -147,3 +147,44 @@ class ChatMessageResponse(BaseModel):
     action_command: Optional[str] = None
     child_telemetry: Optional[Dict[str, Any]] = None
     success: bool = True
+
+# --- Remote Device Control & Hardware Telemetry Schemas ---
+class DeviceControlCommandRequest(BaseModel):
+    device_id: str
+    command: str
+    payload: Optional[Dict[str, Any]] = None
+
+class DeviceControlCommandResponse(BaseModel):
+    success: bool
+    device_id: str
+    command: str
+    message: str
+    updated_state: Dict[str, Any]
+
+class DeviceLocationInfo(BaseModel):
+    latitude: float
+    longitude: float
+    address: str
+    safe_zone: str
+    is_in_safe_zone: bool
+
+class DeviceStatusResponse(BaseModel):
+    device_id: str
+    child_name: str
+    model: str
+    os_version: str
+    battery_level: int
+    is_charging: bool
+    network: str
+    active_app: str
+    screen_time_used_hours: float
+    screen_time_limit_hours: float
+    location: DeviceLocationInfo
+    is_locked: bool
+    lock_message: Optional[str] = None
+    is_internet_paused: bool
+    is_bedtime_mode: bool
+    is_siren_ringing: bool
+    blocked_apps: Dict[str, bool]
+    last_updated: datetime
+

@@ -6,13 +6,59 @@ from sqlalchemy import select, desc
 
 from app.database import get_db
 from app.models.db_models import ChildDevice, SafetyIncident, ActivityLog
-from app.models.schemas import ActivityIngestRequest, RiskAssessmentResult, ActivityLogResponse
+from app.models.schemas import (
+    ActivityIngestRequest,
+    RiskAssessmentResult,
+    ActivityLogResponse,
+    DeviceControlCommandRequest,
+    DeviceControlCommandResponse,
+    DeviceStatusResponse,
+    DeviceLocationInfo,
+)
 from app.agents.supervisor_agent import SupervisorAgent
 from app.services.alert_service import alert_service
 from app.services.compliance_service import compliance_service
 
 router = APIRouter(prefix="/monitor", tags=["AI Safety Ingestion & Risk Analysis"])
 supervisor = SupervisorAgent()
+
+# Live Child Device State Store (Real-time telemetry and remote control state)
+LIVE_DEVICE_STATE = {
+    "device_id": "DEV-AARAV-SAMSUNG-S23",
+    "child_name": "Aarav (Age 13)",
+    "model": "Samsung Galaxy S23 5G",
+    "os_version": "Android 14 (OneUI 6.1)",
+    "battery_level": 84,
+    "is_charging": False,
+    "network": "Jio True 5G (VoLTE)",
+    "active_app": "Instagram DM",
+    "screen_time_used_hours": 1.8,
+    "screen_time_limit_hours": 2.5,
+    "location": {
+        "latitude": 19.0600,
+        "longitude": 72.8362,
+        "address": "Linking Road, Bandra West, Mumbai",
+        "safe_zone": "Home Safe Zone (500m)",
+        "is_in_safe_zone": True,
+    },
+    "is_locked": False,
+    "lock_message": None,
+    "is_internet_paused": False,
+    "is_bedtime_mode": False,
+    "is_siren_ringing": False,
+    "blocked_apps": {
+        "Instagram": False,
+        "Discord": False,
+        "Snapchat": False,
+        "Roblox": False,
+        "YouTube": False,
+        "WhatsApp": False,
+        "Telegram": True,
+        "Free Fire / BGMI": True,
+    },
+    "last_updated": datetime.utcnow(),
+}
+
 
 @router.post("/ingest", response_model=RiskAssessmentResult)
 async def ingest_activity(
@@ -163,4 +209,143 @@ async def list_notifications(
             )
         )
     return out
+
+
+@router.get("/device-status", response_model=DeviceStatusResponse)
+async def get_device_status(device_id: Optional[str] = None):
+    """
+    Returns real-time hardware telemetry and remote control state of child device.
+    """
+    loc_data = LIVE_DEVICE_STATE["location"]
+    return DeviceStatusResponse(
+        device_id=LIVE_DEVICE_STATE["device_id"],
+        child_name=LIVE_DEVICE_STATE["child_name"],
+        model=LIVE_DEVICE_STATE["model"],
+        os_version=LIVE_DEVICE_STATE["os_version"],
+        battery_level=LIVE_DEVICE_STATE["battery_level"],
+        is_charging=LIVE_DEVICE_STATE["is_charging"],
+        network=LIVE_DEVICE_STATE["network"],
+        active_app=LIVE_DEVICE_STATE["active_app"],
+        screen_time_used_hours=LIVE_DEVICE_STATE["screen_time_used_hours"],
+        screen_time_limit_hours=LIVE_DEVICE_STATE["screen_time_limit_hours"],
+        location=DeviceLocationInfo(
+            latitude=loc_data["latitude"],
+            longitude=loc_data["longitude"],
+            address=loc_data["address"],
+            safe_zone=loc_data["safe_zone"],
+            is_in_safe_zone=loc_data["is_in_safe_zone"],
+        ),
+        is_locked=LIVE_DEVICE_STATE["is_locked"],
+        lock_message=LIVE_DEVICE_STATE["lock_message"],
+        is_internet_paused=LIVE_DEVICE_STATE["is_internet_paused"],
+        is_bedtime_mode=LIVE_DEVICE_STATE["is_bedtime_mode"],
+        is_siren_ringing=LIVE_DEVICE_STATE["is_siren_ringing"],
+        blocked_apps=LIVE_DEVICE_STATE["blocked_apps"],
+        last_updated=LIVE_DEVICE_STATE["last_updated"],
+    )
+
+
+@router.post("/device-control", response_model=DeviceControlCommandResponse)
+async def control_child_device(req: DeviceControlCommandRequest):
+    """
+    Parent executes remote enforcement commands on the child device.
+    Commands:
+      - LOCK_DEVICE / UNLOCK_DEVICE
+      - PAUSE_INTERNET / RESUME_INTERNET
+      - TRIGGER_SIREN / STOP_SIREN
+      - SET_BEDTIME_MODE
+      - SET_APP_BLOCK
+      - SET_SCREEN_TIME_LIMIT
+    """
+    cmd = req.command.upper()
+    payload = req.payload or {}
+    msg = ""
+
+    if cmd == "LOCK_DEVICE":
+        LIVE_DEVICE_STATE["is_locked"] = True
+        custom_msg = payload.get("message", "Parent has locked the screen remotely.")
+        LIVE_DEVICE_STATE["lock_message"] = custom_msg
+        msg = f"Screen locked remotely: {custom_msg}"
+
+    elif cmd == "UNLOCK_DEVICE":
+        LIVE_DEVICE_STATE["is_locked"] = False
+        LIVE_DEVICE_STATE["lock_message"] = None
+        msg = "Screen unlocked remotely."
+
+    elif cmd == "PAUSE_INTERNET":
+        LIVE_DEVICE_STATE["is_internet_paused"] = True
+        msg = "Internet connectivity paused on child device."
+
+    elif cmd == "RESUME_INTERNET":
+        LIVE_DEVICE_STATE["is_internet_paused"] = False
+        msg = "Internet connectivity resumed on child device."
+
+    elif cmd == "TRIGGER_SIREN":
+        LIVE_DEVICE_STATE["is_siren_ringing"] = True
+        msg = "🚨 Remote emergency siren triggered on child device!"
+
+    elif cmd == "STOP_SIREN":
+        LIVE_DEVICE_STATE["is_siren_ringing"] = False
+        msg = "Emergency siren silenced."
+
+    elif cmd == "SET_BEDTIME_MODE":
+        enabled = payload.get("enabled", not LIVE_DEVICE_STATE["is_bedtime_mode"])
+        LIVE_DEVICE_STATE["is_bedtime_mode"] = enabled
+        msg = f"Bedtime curfew {'activated' if enabled else 'disabled'}."
+
+    elif cmd == "SET_APP_BLOCK":
+        app_name = payload.get("app_name")
+        if app_name:
+            is_blocked = payload.get("is_blocked", True)
+            LIVE_DEVICE_STATE["blocked_apps"][app_name] = is_blocked
+            msg = f"{app_name} is now {'BLOCKED' if is_blocked else 'ALLOWED'} on child device."
+        else:
+            msg = "Missing app_name in payload."
+
+    elif cmd == "SET_SCREEN_TIME_LIMIT":
+        limit = float(payload.get("limit_hours", 2.5))
+        LIVE_DEVICE_STATE["screen_time_limit_hours"] = limit
+        msg = f"Daily screen time limit adjusted to {limit} hours."
+
+    else:
+        msg = f"Unknown command: {cmd}"
+
+    LIVE_DEVICE_STATE["last_updated"] = datetime.utcnow()
+
+    return DeviceControlCommandResponse(
+        success=True,
+        device_id=LIVE_DEVICE_STATE["device_id"],
+        command=cmd,
+        message=msg,
+        updated_state={
+            "is_locked": LIVE_DEVICE_STATE["is_locked"],
+            "lock_message": LIVE_DEVICE_STATE["lock_message"],
+            "is_internet_paused": LIVE_DEVICE_STATE["is_internet_paused"],
+            "is_bedtime_mode": LIVE_DEVICE_STATE["is_bedtime_mode"],
+            "is_siren_ringing": LIVE_DEVICE_STATE["is_siren_ringing"],
+            "screen_time_limit_hours": LIVE_DEVICE_STATE["screen_time_limit_hours"],
+            "blocked_apps": LIVE_DEVICE_STATE["blocked_apps"],
+        },
+    )
+
+
+@router.post("/update-child-telemetry")
+async def update_child_telemetry(payload: dict):
+    """
+    Child device reports its real hardware telemetry (battery, active app, location).
+    """
+    if "battery_level" in payload:
+        LIVE_DEVICE_STATE["battery_level"] = int(payload["battery_level"])
+    if "is_charging" in payload:
+        LIVE_DEVICE_STATE["is_charging"] = bool(payload["is_charging"])
+    if "active_app" in payload:
+        LIVE_DEVICE_STATE["active_app"] = str(payload["active_app"])
+    if "screen_time_used_hours" in payload:
+        LIVE_DEVICE_STATE["screen_time_used_hours"] = float(payload["screen_time_used_hours"])
+    if "location" in payload and isinstance(payload["location"], dict):
+        LIVE_DEVICE_STATE["location"].update(payload["location"])
+
+    LIVE_DEVICE_STATE["last_updated"] = datetime.utcnow()
+    return {"success": True, "updated_at": LIVE_DEVICE_STATE["last_updated"]}
+
 

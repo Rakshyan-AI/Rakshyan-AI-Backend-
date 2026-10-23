@@ -109,6 +109,7 @@ class GroqService:
 
         # Inject real-time child monitoring telemetry
         if child_context:
+            threat_reason = child_context.get("threat_reason") or "Secrecy cue: do not tell your mom + Photo probe in Instagram DM"
             ctx_summary = (
                 f"### LIVE CHILD MONITORING TELEMETRY:\n"
                 f"• Child Identifier: {child_context.get('child_name', 'Aarav (Age 13)')}\n"
@@ -118,7 +119,7 @@ class GroqService:
                 f"• Battery Level: {child_context.get('battery', 84)}%\n"
                 f"• Screen Time Today: {child_context.get('screen_time_used', 1.8)} hrs used of {child_context.get('screen_time_limit', 2.5)} hrs limit\n"
                 f"• Remote States: Screen Locked={child_context.get('is_locked', False)}, Internet Paused={child_context.get('is_net_paused', False)}, Bedtime Mode={child_context.get('is_bedtime', False)}\n"
-                f"• Critical Threat Reason: {child_context.get('threat_reason', 'Secrecy cue: \"don\'t tell your mom\" + Photo probe in Instagram DM')}\n"
+                f"• Critical Threat Reason: {threat_reason}\n"
                 f"Integrate this live telemetry when replying to any child monitoring or status inquiries."
             )
             messages.append({"role": "system", "content": ctx_summary})
@@ -185,6 +186,7 @@ class GroqService:
 
         # 1. Child Monitoring, Status & Live Telemetry Queries
         if any(w in q for w in ["status", "aarav", "child", "bacha", "safe", "kaisa", "activity", "screen time", "using", "app", "threat"]):
+            threat_desc = ctx.get("threat_reason") or "Secrecy cue: do not tell mom + private photo probe"
             reply = (
                 f"### 📊 Live Child Monitoring Telemetry: {ctx.get('child_name', 'Aarav')}\n\n"
                 f"Here is the real-time safety status from connected device **{ctx.get('device_id', 'DEV-AARAV-SAMSUNG-S23')}**:\n\n"
@@ -192,7 +194,7 @@ class GroqService:
                 f"• **Active Foreground App**: 📱 **{ctx.get('active_app', 'Instagram DM')}** (Live)\n"
                 f"• **Battery Level**: 🔋 **{ctx.get('battery', 84)}%**\n"
                 f"• **Screen Time Used**: ⏱️ **{ctx.get('screen_time_used', 1.8)} hrs / {ctx.get('screen_time_limit', 2.5)} hrs daily limit**\n"
-                f"• **Recent Threat Trigger**: *{ctx.get('threat_reason', 'Secrecy cue: don\'t tell mom + private photo probe')}*\n\n"
+                f"• **Recent Threat Trigger**: *{threat_desc}*\n\n"
                 f"**Legal Assessment & Recommended Immediate Actions:**\n"
                 f"1. **POCSO Act (Sec 11/12)**: The flagged message indicates grooming and boundary probing. Under Section 19, parents have a legal duty to protect minors and report suspected predatory contacts.\n"
                 f"2. **Immediate Safety Controls**: You can remotely **Lock the Device** or **Pause Internet Access** immediately using the action buttons below.\n"
