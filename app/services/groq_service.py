@@ -138,20 +138,38 @@ class GroqService:
             "Content-Type": "application/json"
         }
 
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": 0.3,
-            "max_tokens": 1024,
-            "top_p": 0.9
-        }
+        candidate_models = [
+            self.model,
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "llama3-70b-8192"
+        ]
+        # Deduplicate preserving order
+        unique_models = []
+        for m in candidate_models:
+            if m and m not in unique_models:
+                unique_models.append(m)
 
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(self.api_url, headers=headers, json=payload)
-            if response.status_code != 200:
-                raise RuntimeError(f"Groq API returned status {response.status_code}: {response.text}")
-            data = response.json()
-            return data["choices"][0]["message"]["content"]
+            last_err = ""
+            for candidate in unique_models:
+                payload = {
+                    "model": candidate,
+                    "messages": messages,
+                    "temperature": 0.3,
+                    "max_tokens": 1024,
+                    "top_p": 0.9
+                }
+                response = await client.post(self.api_url, headers=headers, json=payload)
+                if response.status_code == 200:
+                    data = response.json()
+                    self.model = candidate  # memorize working model
+                    return data["choices"][0]["message"]["content"]
+                last_err = response.text
+
+            raise RuntimeError(f"Groq API error across candidate models: {last_err}")
 
     def _detect_action_command(self, query: str) -> Optional[str]:
         q = query.lower()
