@@ -282,7 +282,8 @@ async def control_child_device(req: DeviceControlCommandRequest):
 
     elif cmd == "TRIGGER_SIREN":
         LIVE_DEVICE_STATE["is_siren_ringing"] = True
-        msg = "🚨 Remote emergency siren triggered on child device!"
+        msg = "Remote emergency siren triggered on child device!"
+
 
     elif cmd == "STOP_SIREN":
         LIVE_DEVICE_STATE["is_siren_ringing"] = False
