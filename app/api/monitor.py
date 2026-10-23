@@ -1,11 +1,12 @@
 from datetime import datetime
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, desc
 
 from app.database import get_db
 from app.models.db_models import ChildDevice, SafetyIncident, ActivityLog
-from app.models.schemas import ActivityIngestRequest, RiskAssessmentResult
+from app.models.schemas import ActivityIngestRequest, RiskAssessmentResult, ActivityLogResponse
 from app.agents.supervisor_agent import SupervisorAgent
 from app.services.alert_service import alert_service
 from app.services.compliance_service import compliance_service
@@ -48,9 +49,13 @@ async def ingest_activity(
     activity = ActivityLog(
         child_id=child.id,
         app_name=req.app_name,
+        package_name=req.package_name,
         sender_alias=req.sender,
+        text_content=req.text_content,
         analyzed_risk=eval_result.overall_risk_score,
-        sentiment_score=eval_result.overall_risk_score
+        sentiment_score=eval_result.overall_risk_score,
+        category=eval_result.category,
+        severity=eval_result.severity
     )
     db.add(activity)
 
@@ -116,3 +121,46 @@ async def simulate_test_sentence(text: str):
     Useful for live demos and jury presentations!
     """
     return supervisor.evaluate(text=text)
+
+
+@router.get("/notifications", response_model=List[ActivityLogResponse])
+async def list_notifications(
+    child_id: Optional[str] = None,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Retrieve all intercepted notifications from child devices across all apps (WhatsApp, Instagram, Discord, SMS, YouTube, etc.).
+    """
+    query = select(ActivityLog, ChildDevice.child_name).outerjoin(
+        ChildDevice, ActivityLog.child_id == ChildDevice.id
+    )
+    if child_id:
+        query = query.where(
+            (ActivityLog.child_id == child_id) | 
+            (ChildDevice.device_id == child_id)
+        )
+    query = query.order_by(desc(ActivityLog.processed_at)).limit(limit)
+    res = await db.execute(query)
+    rows = res.all()
+
+    out: List[ActivityLogResponse] = []
+    for act, child_name in rows:
+        out.append(
+            ActivityLogResponse(
+                id=act.id,
+                child_id=act.child_id,
+                child_name=child_name or "Child Device",
+                app_name=act.app_name,
+                package_name=act.package_name,
+                sender_alias=act.sender_alias or "Unknown Sender",
+                text_content=act.text_content,
+                analyzed_risk=act.analyzed_risk or 0.0,
+                sentiment_score=act.sentiment_score or 0.0,
+                category=act.category or "Safe",
+                severity=act.severity or "SAFE",
+                processed_at=act.processed_at
+            )
+        )
+    return out
+

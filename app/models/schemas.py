@@ -59,9 +59,24 @@ class ChildDeviceResponse(BaseModel):
 class ActivityIngestRequest(BaseModel):
     device_id: str
     app_name: str  # WhatsApp, Instagram, Telegram, SMS, etc.
+    package_name: Optional[str] = None
     sender: Optional[str] = "Anonymous"
     text_content: str
     context_type: Optional[str] = "incoming_message"  # incoming_message, notification
+
+class ActivityLogResponse(BaseModel):
+    id: str
+    child_id: str
+    child_name: Optional[str] = None
+    app_name: str
+    package_name: Optional[str] = None
+    sender_alias: Optional[str] = None
+    text_content: Optional[str] = None
+    analyzed_risk: float = 0.0
+    sentiment_score: float = 0.0
+    category: Optional[str] = "Safe"
+    severity: str = "SAFE"
+    processed_at: datetime
 
 class AgentScoreDetail(BaseModel):
     agent_name: str
@@ -104,4 +119,31 @@ class DashboardOverviewResponse(BaseModel):
     active_threats_count: int
     overall_family_safety_score: float
     recent_incidents: List[IncidentResponse]
+    recent_notifications: List[ActivityLogResponse] = []
     category_distribution: Dict[str, int]
+
+# --- Chat & Legal AI Schemas ---
+class ChatHistoryItem(BaseModel):
+    role: str  # user, assistant, system
+    content: str
+
+class ChatMessageRequest(BaseModel):
+    message: str
+    history: Optional[List[ChatHistoryItem]] = None
+    child_context: Optional[Dict[str, Any]] = None
+
+class HelplineInfo(BaseModel):
+    name: str
+    number: str
+    purpose: str
+
+class ChatMessageResponse(BaseModel):
+    reply: str
+    model: str
+    provider: Optional[str] = "Groq LLaMA"
+    relevant_laws: List[str] = []
+    helplines: List[HelplineInfo] = []
+    suggested_actions: List[str] = []
+    action_command: Optional[str] = None
+    child_telemetry: Optional[Dict[str, Any]] = None
+    success: bool = True

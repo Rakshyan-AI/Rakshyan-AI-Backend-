@@ -32,6 +32,21 @@ async def get_db():
         finally:
             await session.close()
 
+from sqlalchemy import text
+
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        if "sqlite" in settings.DATABASE_URL:
+            # Safe migration for existing SQLite dev databases
+            for col_sql in [
+                "ALTER TABLE activity_logs ADD COLUMN package_name VARCHAR",
+                "ALTER TABLE activity_logs ADD COLUMN text_content TEXT",
+                "ALTER TABLE activity_logs ADD COLUMN category VARCHAR",
+                "ALTER TABLE activity_logs ADD COLUMN severity VARCHAR DEFAULT 'SAFE'",
+            ]:
+                try:
+                    await conn.execute(text(col_sql))
+                except Exception:
+                    pass
+

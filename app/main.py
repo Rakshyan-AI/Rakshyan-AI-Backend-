@@ -9,6 +9,7 @@ from app.api.pairing import router as pairing_router
 from app.api.monitor import router as monitor_router
 from app.api.incidents import router as incidents_router
 from app.api.analytics import router as analytics_router
+from app.api.chat import router as chat_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,6 +44,7 @@ app.include_router(pairing_router, prefix=settings.API_PREFIX)
 app.include_router(monitor_router, prefix=settings.API_PREFIX)
 app.include_router(incidents_router, prefix=settings.API_PREFIX)
 app.include_router(analytics_router, prefix=settings.API_PREFIX)
+app.include_router(chat_router, prefix=settings.API_PREFIX)
 
 @app.get("/")
 async def root():

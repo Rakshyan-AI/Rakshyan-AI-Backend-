@@ -107,6 +107,82 @@ async def seed():
         )
 
         db.add_all([inc1, inc2])
+
+        # Seed Multi-App Intercepted Notifications for Child Device
+        print("[*] Seeding Multi-App Intercepted Notifications...")
+        notif1 = ActivityLog(
+            child_id=child1.id,
+            app_name="WhatsApp",
+            package_name="com.whatsapp",
+            sender_alias="Rohan (Classmate)",
+            text_content="Hey bro, are we playing football after tuition today at 5 PM?",
+            analyzed_risk=5.0,
+            sentiment_score=5.0,
+            category="Safe Conversation",
+            severity="SAFE",
+            processed_at=datetime.utcnow() - timedelta(minutes=6)
+        )
+        notif2 = ActivityLog(
+            child_id=child1.id,
+            app_name="Instagram DM",
+            package_name="com.instagram.android",
+            sender_alias="unknown_shadow_99",
+            text_content="Don't tell your mom about our chat. She doesn't understand you, send me a private selfie now.",
+            analyzed_risk=87.5,
+            sentiment_score=87.5,
+            category="Grooming & Coercion",
+            severity="CRITICAL",
+            processed_at=datetime.utcnow() - timedelta(minutes=15)
+        )
+        notif3 = ActivityLog(
+            child_id=child1.id,
+            app_name="Discord",
+            package_name="com.discord",
+            sender_alias="GamerGroup_Bot",
+            text_content="You are such a loser, nobody likes you in this school group. Stop texting here.",
+            analyzed_risk=72.0,
+            sentiment_score=72.0,
+            category="Cyberbullying",
+            severity="HIGH",
+            processed_at=datetime.utcnow() - timedelta(hours=1, minutes=10)
+        )
+        notif4 = ActivityLog(
+            child_id=child1.id,
+            app_name="YouTube",
+            package_name="com.google.android.youtube",
+            sender_alias="Veritasium",
+            text_content="New video upload: The Quantum Computing Revolution in 2026",
+            analyzed_risk=2.0,
+            sentiment_score=2.0,
+            category="Educational",
+            severity="SAFE",
+            processed_at=datetime.utcnow() - timedelta(hours=2, minutes=20)
+        )
+        notif5 = ActivityLog(
+            child_id=child1.id,
+            app_name="SMS Messages",
+            package_name="com.google.android.apps.messaging",
+            sender_alias="School Alert / DPS",
+            text_content="Dear Parent/Student, Annual Science Exhibition rehearsal begins tomorrow at 9 AM.",
+            analyzed_risk=3.0,
+            sentiment_score=3.0,
+            category="Notice",
+            severity="SAFE",
+            processed_at=datetime.utcnow() - timedelta(hours=3, minutes=15)
+        )
+        notif6 = ActivityLog(
+            child_id=child1.id,
+            app_name="Snapchat",
+            package_name="com.snapchat.android",
+            sender_alias="Priya Sharma",
+            text_content="Sent a new snap! 🔥 34 day streak",
+            analyzed_risk=8.0,
+            sentiment_score=8.0,
+            category="Social / Casual",
+            severity="SAFE",
+            processed_at=datetime.utcnow() - timedelta(hours=4)
+        )
+        db.add_all([notif1, notif2, notif3, notif4, notif5, notif6])
         await db.commit()
 
         # Log DPDP compliance record for demonstration

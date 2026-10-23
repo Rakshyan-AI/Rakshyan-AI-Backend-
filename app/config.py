@@ -33,4 +33,8 @@ class Settings(BaseModel):
     RISK_THRESHOLD_HIGH: int = 70
     RISK_THRESHOLD_CRITICAL: int = 85
 
+    # Groq LLaMA AI Settings
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
 settings = Settings()

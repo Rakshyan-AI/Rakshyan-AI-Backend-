@@ -83,9 +83,13 @@ class ActivityLog(Base):
     id = Column(String, primary_key=True, default=generate_uuid)
     child_id = Column(String, ForeignKey("child_devices.id"), nullable=False)
     app_name = Column(String, nullable=False)
+    package_name = Column(String, nullable=True)
     sender_alias = Column(String, nullable=True)
+    text_content = Column(Text, nullable=True)
     analyzed_risk = Column(Float, default=0.0)
     sentiment_score = Column(Float, default=0.0)
+    category = Column(String, nullable=True)
+    severity = Column(String, default="SAFE")
     processed_at = Column(DateTime, default=datetime.utcnow)
     
     child = relationship("ChildDevice", back_populates="activity_logs")

@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 
 from app.database import get_db
-from app.models.db_models import User, ChildDevice, SafetyIncident
-from app.models.schemas import DashboardOverviewResponse, IncidentResponse
+from app.models.db_models import User, ChildDevice, SafetyIncident, ActivityLog
+from app.models.schemas import DashboardOverviewResponse, IncidentResponse, ActivityLogResponse
 from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/analytics", tags=["Dashboard Analytics"])
@@ -72,6 +72,31 @@ async def get_overview(
         for inc in recent_raw
     ]
 
+    # Recent notifications across all apps
+    act_stmt = select(ActivityLog).where(
+        ActivityLog.child_id.in_(child_ids)
+    ).order_by(desc(ActivityLog.processed_at)).limit(15)
+    act_res = await db.execute(act_stmt)
+    recent_acts = act_res.scalars().all()
+
+    recent_notifications = [
+        ActivityLogResponse(
+            id=act.id,
+            child_id=act.child_id,
+            child_name=child_dict.get(act.child_id, "Child"),
+            app_name=act.app_name,
+            package_name=act.package_name,
+            sender_alias=act.sender_alias or "Unknown Sender",
+            text_content=act.text_content,
+            analyzed_risk=act.analyzed_risk or 0.0,
+            sentiment_score=act.sentiment_score or 0.0,
+            category=act.category or "Safe",
+            severity=act.severity or "SAFE",
+            processed_at=act.processed_at
+        )
+        for act in recent_acts
+    ]
+
     # Category distribution
     cat_dist: Dict[str, int] = {}
     cat_stmt = select(SafetyIncident.category, func.count(SafetyIncident.id)).where(
@@ -86,5 +111,6 @@ async def get_overview(
         active_threats_count=active_threats_count,
         overall_family_safety_score=family_safety_score,
         recent_incidents=recent_incidents,
+        recent_notifications=recent_notifications,
         category_distribution=cat_dist
     )
