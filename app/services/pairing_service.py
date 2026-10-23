@@ -33,7 +33,8 @@ async def verify_and_bind_device(
     code: str,
     device_id: str,
     device_model: str = "Android Device",
-    os_version: str = "Android 14"
+    os_version: str = "Android 14",
+    child_name: Optional[str] = None
 ) -> Tuple[bool, str, Optional[ChildDevice], Optional[User]]:
     """
     Validates the 6-digit pairing code and establishes parent-child device relationship.
@@ -58,6 +59,8 @@ async def verify_and_bind_device(
     if not parent:
         return False, "Parent account not found.", None, None
 
+    resolved_child_name = (child_name.strip() if child_name and child_name.strip() else None) or pairing_record.child_nickname or "Child Device"
+
     # Check if this hardware device is already registered
     dev_stmt = select(ChildDevice).where(ChildDevice.device_id == device_id)
     dev_res = await db.execute(dev_stmt)
@@ -66,7 +69,7 @@ async def verify_and_bind_device(
     if existing_dev:
         # Re-link existing device to this parent
         existing_dev.parent_id = parent.id
-        existing_dev.child_name = pairing_record.child_nickname
+        existing_dev.child_name = resolved_child_name
         existing_dev.device_model = device_model
         existing_dev.os_version = os_version
         existing_dev.is_active = True
@@ -77,7 +80,7 @@ async def verify_and_bind_device(
         child_device = ChildDevice(
             parent_id=parent.id,
             device_id=device_id,
-            child_name=pairing_record.child_nickname,
+            child_name=resolved_child_name,
             device_model=device_model,
             os_version=os_version,
             is_active=True,

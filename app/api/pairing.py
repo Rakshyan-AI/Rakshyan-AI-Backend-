@@ -48,7 +48,8 @@ async def verify_code(
         code=req.code,
         device_id=req.device_id,
         device_model=req.device_model or "Android Device",
-        os_version=req.os_version or "Android 14"
+        os_version=req.os_version or "Android 14",
+        child_name=req.child_name
     )
 
     if not success or not child_device or not parent:

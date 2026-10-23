@@ -35,6 +35,7 @@ class VerifyPairingCodeRequest(BaseModel):
     device_id: str
     device_model: Optional[str] = "Android Device"
     os_version: Optional[str] = "Android 14"
+    child_name: Optional[str] = None
 
 class VerifyPairingCodeResponse(BaseModel):
     success: bool
@@ -121,6 +122,8 @@ class DashboardOverviewResponse(BaseModel):
     recent_incidents: List[IncidentResponse]
     recent_notifications: List[ActivityLogResponse] = []
     category_distribution: Dict[str, int]
+    linked_devices: List[ChildDeviceResponse] = []
+
 
 # --- Chat & Legal AI Schemas ---
 class ChatHistoryItem(BaseModel):

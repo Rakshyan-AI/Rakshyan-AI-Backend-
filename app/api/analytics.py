@@ -5,7 +5,7 @@ from sqlalchemy import select, func, desc
 
 from app.database import get_db
 from app.models.db_models import User, ChildDevice, SafetyIncident, ActivityLog
-from app.models.schemas import DashboardOverviewResponse, IncidentResponse, ActivityLogResponse
+from app.models.schemas import DashboardOverviewResponse, IncidentResponse, ActivityLogResponse, ChildDeviceResponse
 from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/analytics", tags=["Dashboard Analytics"])
@@ -24,13 +24,30 @@ async def get_overview(
     child_dict = {c.id: c.child_name for c in children}
 
     total_devices = len(children)
+    linked_devices = [
+        ChildDeviceResponse(
+            id=c.id,
+            device_id=c.device_id,
+            child_name=c.child_name,
+            device_model=c.device_model or "Android Device",
+            is_active=c.is_active,
+            current_risk_score=c.current_risk_score,
+            current_status=c.current_status,
+            last_sync_at=c.last_sync_at,
+            created_at=c.created_at
+        )
+        for c in children
+    ]
+
     if total_devices == 0:
         return DashboardOverviewResponse(
             total_linked_devices=0,
             active_threats_count=0,
             overall_family_safety_score=100.0,
             recent_incidents=[],
-            category_distribution={}
+            recent_notifications=[],
+            category_distribution={},
+            linked_devices=[]
         )
 
     # Active threats (Severity in HIGH or CRITICAL with status 'new')
@@ -75,7 +92,7 @@ async def get_overview(
     # Recent notifications across all apps
     act_stmt = select(ActivityLog).where(
         ActivityLog.child_id.in_(child_ids)
-    ).order_by(desc(ActivityLog.processed_at)).limit(15)
+    ).order_by(desc(ActivityLog.processed_at)).limit(10)
     act_res = await db.execute(act_stmt)
     recent_acts = act_res.scalars().all()
 
@@ -112,5 +129,7 @@ async def get_overview(
         overall_family_safety_score=family_safety_score,
         recent_incidents=recent_incidents,
         recent_notifications=recent_notifications,
-        category_distribution=cat_dist
+        category_distribution=cat_dist,
+        linked_devices=linked_devices
     )
+
